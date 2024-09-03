@@ -41,7 +41,7 @@ class MagifactoryPromptGenerator:
         try:
             genai.configure(api_key=api_key)
             gemini_model = genai.GenerativeModel(model)
-            input_prompt = f"Generate me a prompt for image generator. The theme of the prompt is {theme}. You already created those prompts: {memory}. make sure you generate original prompt. Think about it step by step and make some internal critique. Final proimpt is encapsulated in <prompt> tags"
+            input_prompt = f"Generate me a prompt for image generator. The theme of the prompt is {theme}. You already created those prompts: {memory}. make sure you generate original prompt. Think about it step by step and make some internal critique. Final prompt is encapsulated in <prompt> tags"
             response = gemini_model.generate_content(input_prompt)
             generated_prompt = response.text.strip()
             print("-------------")
