@@ -36,7 +36,7 @@ class JTGeminiPromptGenerator:  # 修改类名
             "required": {
                 "theme": ("STRING", {"default": "", "multiline": True}),
                 "model": (["gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro"],),
-                "prompt_length": ("INT", {"default": 200, "min": 0, "max": 2000}),
+                "prompt_length": ("INT", {"default": 200, "min": 0, "max": 5000}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff})
             }
         }
