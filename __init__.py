@@ -28,7 +28,7 @@ def get_gemini_api_key():
         print(f"Error: Unable to read API key. {str(e)}")
         return ""
 
-class JTGeminiPromptGenerator:  # 修改类名
+class GeminiPromptGeneratorJT:  # 修改类名
     
     @classmethod
     def INPUT_TYPES(s):
@@ -76,10 +76,10 @@ class JTGeminiPromptGenerator:  # 修改类名
 
 # Node class mappings
 NODE_CLASS_MAPPINGS = {
-    "JTGeminiPromptGenerator": JTGeminiPromptGenerator  # 更新节点映射
+    "GeminiPromptGeneratorJT": GeminiPromptGeneratorJT  # 更新节点映射
 }
 
 # Node display name mappings
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "JTGeminiPromptGenerator": "JT Gemini Prompt Generator"  # 更新显示名称映射
+    "GeminiPromptGeneratorJT": "Gemini Prompt Generator-JT"  # 更新显示名称映射
 }
