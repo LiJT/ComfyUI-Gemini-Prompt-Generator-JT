@@ -3,16 +3,10 @@ import json
 import google.generativeai as genai
 import random
 import re 
+import concurrent.futures
+import threading
 
 memory = []
-
-def extract_prompt(text):
-    pattern = r'<prompt>(.*?)</prompt>'
-    match = re.search(pattern, text, re.DOTALL)
-    if match:
-        return match.group(1)
-    else:
-        return None
 
 # 新增函数: 从 config.json 文件中读取 API 密钥
 def get_gemini_api_key():
@@ -28,16 +22,18 @@ def get_gemini_api_key():
         print(f"Error: Unable to read API key. {str(e)}")
         return ""
 
-class GeminiPromptGeneratorJT:  # 修改类名
+class GeminiPromptGeneratorJT:  
     
     @classmethod
     def INPUT_TYPES(s):
         return {
             "required": {
                 "theme": ("STRING", {"default": "", "multiline": True}),
+                "override_system_prompt": ("STRING", {"default": "", "multiline": False}),
                 "model": (["gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro", "gemini-2.0-flash-exp"],),
                 "prompt_length": ("INT", {"default": 200, "min": 0, "max": 5000}),
-                "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff})
+                "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+                "timeout": ("INT", {"default": 30, "min": 0, "max": 6000})
             }
         }
     
@@ -45,7 +41,7 @@ class GeminiPromptGeneratorJT:  # 修改类名
     FUNCTION = "generate_prompt"
     CATEGORY = "text/generation"
     
-    def generate_prompt(self, theme, model, prompt_length, seed):
+    def generate_prompt(self, theme, override_system_prompt, model, prompt_length, seed, timeout):
         # Use the seed to initialize the random number generator
         random.seed(seed)
 
@@ -54,32 +50,61 @@ class GeminiPromptGeneratorJT:  # 修改类名
         if not api_key:
             return ("Error: API key is required. Please check config.json.",)
         
-        try:
-            genai.configure(api_key=api_key)
-            gemini_model = genai.GenerativeModel(model)
-            input_prompt = f"Generate me a prompt for image generator. The theme of the prompt is {theme}. You already created those prompts: {memory}. make sure you generate original prompt. Think about it step by step and make some internal critique. You must keep the length of prompt around {prompt_length} words, and remove the unnecessary two blank spaces or line breaks between each sentence in the Final prompt. Final prompt is encapsulated in <prompt> tags."
-            response = gemini_model.generate_content(input_prompt)
-            generated_prompt = response.text.strip()
-            print("-------------")
-            print(generated_prompt)
-            memory.append(generated_prompt)
-            display_text = f"Theme: {theme}\nSeed: {seed}\n\nGenerated Prompt:\n{generated_prompt}"
-            extracted_prompt = extract_prompt(generated_prompt)
-            print(extracted_prompt)
-            print("-------------")
+        def generate_content_with_timeout():
+            try:
+                genai.configure(api_key=api_key)
+                gemini_model = genai.GenerativeModel(model)
 
-            return (extracted_prompt,)
-        except Exception as e:
-            error_message = f"Error: Failed to generate prompt. Please check your API key and model name. Details: {str(e)}"
-            print(error_message)
-            return (error_message,)
+                # 根据 prompt_length 动态调整 input_prompt
+                if not override_system_prompt:
+                    input_prompt = f"Generate me a prompt for image generator. The theme of the prompt is {theme}. Make sure you generate original prompt. Think about it step by step and make some internal critique. You only need to output generated prompt and nothing else"
+                    
+                    # 只有当 prompt_length 不为 0 时，才添加长度和 prompt 标签的限制
+                    if prompt_length > 0:
+                        input_prompt += f" You must keep the length of your generated prompt around {prompt_length} words."
+                else:
+                    input_prompt = f"The theme is {theme}. Please generate a response strictly following the instruction: {override_system_prompt}."
+                    
+                    # 只有当 prompt_length 不为 0 时，才添加长度和 prompt 标签的限制
+                    if prompt_length > 0:
+                        input_prompt += f" You must keep the length of response around {prompt_length} words."
+
+                response = gemini_model.generate_content(input_prompt)
+                generated_prompt = response.text.strip()
+                
+                print("----INPUT----")
+                print(input_prompt)
+
+                print("----OUTPUT----")
+                print(generated_prompt)
+                print("-------------")
+                return generated_prompt
+                
+            except Exception as e:
+                return f"Error: Failed to generate prompt. Details: {str(e)}"
+
+        # 使用 concurrent.futures 实现超时
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(generate_content_with_timeout)
+            try:
+                # 使用 as_completed 和 timeout 参数
+                generated_prompt = future.result(timeout=timeout)
+                return (generated_prompt,)
+            except concurrent.futures.TimeoutError:
+                error_message = f"Error: Prompt generation timed out after {timeout} seconds."
+                print(error_message)
+                return (error_message,)
+            except Exception as e:
+                error_message = f"Error: Failed to generate prompt. Details: {str(e)}"
+                print(error_message)
+                return (error_message,)
 
 # Node class mappings
 NODE_CLASS_MAPPINGS = {
-    "GeminiPromptGeneratorJT": GeminiPromptGeneratorJT  # 更新节点映射
+    "GeminiPromptGeneratorJT": GeminiPromptGeneratorJT
 }
 
 # Node display name mappings
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "GeminiPromptGeneratorJT": "Gemini Prompt Generator-JT"  # 更新显示名称映射
+    "GeminiPromptGeneratorJT": "Gemini Prompt Generator-JT"
 }
