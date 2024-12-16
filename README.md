@@ -1,5 +1,6 @@
 # Gemini prompt generator JT version
-custom node for Comfyui that generates theme related prompts for image generators
+Custom node to use Gemini 1.5 and above for Comfyui to generates theme related prompts for image generators
+Fork from Magifactory, added many feature on top of it.
 ![1](https://github.com/user-attachments/assets/fe987a9f-06c8-4a35-8de2-4b301007b266)
 ## New update
 Now support Gemini 2.0 Flash!
