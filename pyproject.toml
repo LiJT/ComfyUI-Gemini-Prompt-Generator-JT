@@ -1,0 +1,15 @@
+[project]
+name = "comfyui-gemini-prompt-generator-jt"
+description = "Custom node to use Gemini 1.5 and above for Comfyui to generates theme related prompts for image generators"
+version = "1.0.0"
+license = {file = "LICENSE"}
+dependencies = ["google-generativeai"]
+
+[project.urls]
+Repository = "https://github.com/LiJT/ComfyUI-Gemini-Prompt-Generator-JT"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = ""
+DisplayName = "ComfyUI-Gemini-Prompt-Generator-JT"
+Icon = ""
