@@ -5,8 +5,16 @@ import random
 import re 
 import concurrent.futures
 import threading
+from collections import deque
 
-memory = []
+class ComfyUITimeoutError(Exception):
+    pass
+
+class ComfyUIAPIError(Exception):
+    pass
+
+# 使用deque替代list，并设置最大长度为15
+memory = deque(maxlen=15)
 
 # 新增函数: 从 config.json 文件中读取 API 密钥
 def get_gemini_api_key():
@@ -48,7 +56,7 @@ class GeminiPromptGeneratorJT:
         # 通过 config.json 获取 API 密钥
         api_key = get_gemini_api_key()
         if not api_key:
-            return ("Error: API key is required. Please check config.json.",)
+            raise ComfyUIAPIError("API key is required. Please check config.json.")
         
         def generate_content_with_timeout():
             try:
@@ -57,7 +65,7 @@ class GeminiPromptGeneratorJT:
 
                 # 根据 prompt_length 动态调整 input_prompt
                 if not override_system_prompt:
-                    input_prompt = f"Generate me a prompt for image generator. The theme of the prompt is {theme}. You already created those prompts: {memory}. Make sure you generate original prompt. Think about it step by step and make some internal critique. You only need to output generated prompt and nothing else"
+                    input_prompt = f"Generate me a prompt for image generator. The theme of the prompt is {theme}. You already created those prompts: {list(memory)}. Make sure you generate original prompt. Think about it step by step and make some internal critique. You only need to output generated prompt and nothing else"
                     
                     # 只有当 prompt_length 不为 0 时，才添加长度和 prompt 标签的限制
                     if prompt_length > 0:
@@ -76,12 +84,13 @@ class GeminiPromptGeneratorJT:
                 print(input_prompt)
                 print("----OUTPUT----")
                 print(generated_prompt)
+                # 使用deque的append方法，当达到最大长度时会自动移除最早的元素
                 memory.append(generated_prompt)
                 print("-------------")
                 return generated_prompt
                 
             except Exception as e:
-                return f"Error: Failed to generate prompt. Details: {str(e)}"
+                raise ComfyUIAPIError(f"Failed to generate prompt. Details: {str(e)}")
 
         # 使用 concurrent.futures 实现超时
         with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -91,13 +100,12 @@ class GeminiPromptGeneratorJT:
                 generated_prompt = future.result(timeout=timeout)
                 return (generated_prompt,)
             except concurrent.futures.TimeoutError:
-                error_message = f"Error: Prompt generation timed out after {timeout} seconds."
-                print(error_message)
-                return (error_message,)
+                error_message = f"Prompt generation timed out after {timeout} seconds. Please check your network connection or increase the timeout value."
+                raise ComfyUITimeoutError(error_message)
             except Exception as e:
-                error_message = f"Error: Failed to generate prompt. Details: {str(e)}"
-                print(error_message)
-                return (error_message,)
+                if isinstance(e, ComfyUIAPIError):
+                    raise e
+                raise ComfyUIAPIError(f"Failed to generate prompt. Details: {str(e)}")
 
 # Node class mappings
 NODE_CLASS_MAPPINGS = {
