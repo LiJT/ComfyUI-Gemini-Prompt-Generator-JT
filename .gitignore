@@ -1,0 +1,7 @@
+# 忽略包含敏感信息的配置文件
+config.json
+
+# 其他常见需要忽略的文件
+__pycache__/
+*.pyc
+.DS_Store 

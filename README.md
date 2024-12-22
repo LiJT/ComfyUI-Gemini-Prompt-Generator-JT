@@ -2,6 +2,15 @@
 Custom node to use Gemini 1.5 and above for Comfyui to generates theme related prompts for image generators
 Fork from Magifactory, added many feature on top of it.
 
+# 配置说明
+1. 复制 `config.json.default` 为 `config.json`
+. 在 `config.json` 中填入您的 Gemini API 密钥：
+```bash
+{
+    "GEMINI_API_KEY": "YOUR_API_KEY_HERE"
+}
+```
+
 <img src="https://github.com/user-attachments/assets/fe987a9f-06c8-4a35-8de2-4b301007b266" width="400">
 
 ## New update

@@ -57,7 +57,7 @@ class GeminiPromptGeneratorJT:
 
                 # 根据 prompt_length 动态调整 input_prompt
                 if not override_system_prompt:
-                    input_prompt = f"Generate me a prompt for image generator. The theme of the prompt is {theme}. Make sure you generate original prompt. Think about it step by step and make some internal critique. You only need to output generated prompt and nothing else"
+                    input_prompt = f"Generate me a prompt for image generator. The theme of the prompt is {theme}. You already created those prompts: {memory}. Make sure you generate original prompt. Think about it step by step and make some internal critique. You only need to output generated prompt and nothing else"
                     
                     # 只有当 prompt_length 不为 0 时，才添加长度和 prompt 标签的限制
                     if prompt_length > 0:
@@ -74,9 +74,9 @@ class GeminiPromptGeneratorJT:
                 
                 print("----INPUT----")
                 print(input_prompt)
-
                 print("----OUTPUT----")
                 print(generated_prompt)
+                memory.append(generated_prompt)
                 print("-------------")
                 return generated_prompt
                 
