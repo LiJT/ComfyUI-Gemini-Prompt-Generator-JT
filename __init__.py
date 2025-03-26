@@ -40,7 +40,7 @@ class GeminiPromptGeneratorJT:
             "required": {
                 "theme": ("STRING", {"default": "", "multiline": True}),
                 "override_system_prompt": ("STRING", {"default": "", "multiline": False}),
-                "model": (["gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro", "gemini-2.0-pro", "gemini-pro-vision"],),
+                "model": (["gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.0-pro", "gemini-pro-vision"],),
                 "memory": (["Enable", "Disable"],),
                 "prompt_length": ("INT", {"default": 200, "min": 0, "max": 5000}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
