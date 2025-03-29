@@ -58,7 +58,7 @@ class GeminiPromptGeneratorJT:
                     "default": 200, 
                     "min": 0, 
                     "max": 5000,
-                    "tooltip": "控制生成提示词的长度（单词数）。设为0表示不限制长度"
+                    "tooltip": "控制生成提示词的长度(单词数)。设为0表示不限制长度"
                 }),
                 "seed": ("INT", {
                     "default": 0, 
@@ -70,7 +70,7 @@ class GeminiPromptGeneratorJT:
                     "default": 30, 
                     "min": 0, 
                     "max": 6000,
-                    "tooltip": "API请求超时时间（秒）。如果在指定时间内未收到响应，将中断请求"
+                    "tooltip": "API请求超时时间(秒)。如果在指定时间内未收到响应，将中断请求"
                 })
             }
         }
