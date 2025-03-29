@@ -38,13 +38,40 @@ class GeminiPromptGeneratorJT:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "theme": ("STRING", {"default": "", "multiline": True}),
-                "override_system_prompt": ("STRING", {"default": "", "multiline": False}),
-                "model": (["gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.0-pro", "gemini-pro-vision"],),
-                "memory": (["Enable", "Disable"],),
-                "prompt_length": ("INT", {"default": 200, "min": 0, "max": 5000}),
-                "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
-                "timeout": ("INT", {"default": 30, "min": 0, "max": 6000})
+                "theme": ("STRING", {
+                    "default": "", 
+                    "multiline": True,
+                    "tooltip": "输入想要生成的提示词主题"
+                }),
+                "override_system_prompt": ("STRING", {
+                    "default": "", 
+                    "multiline": True, 
+                    "tooltip": "自定义提示词。您可以使用以下变量：\n{theme} - 当前主题\n{prompt_history}或{memory} - 历史提示记录(当Memory设置为Disable时将替换为空列表[])\n{prompt_length} - 提示长度设置\n{seed} - 当前种子值\n例如：'为{theme}生成一个图像提示词，历史记录：{prompt_history}'"
+                }),
+                "model": (["gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.0-pro", "gemini-pro-vision","gemini-2.5-pro-exp-03-25"], {
+                    "tooltip": "选择要使用的Gemini模型。不同模型有不同的能力和速度特性"
+                }),
+                "memory": (["Enable", "Disable"], {
+                    "tooltip": "启用或禁用历史记忆功能。启用时会记住之前生成的提示，避免重复；禁用时每次生成独立提示"
+                }),
+                "prompt_length": ("INT", {
+                    "default": 200, 
+                    "min": 0, 
+                    "max": 5000,
+                    "tooltip": "控制生成提示词的长度（单词数）。设为0表示不限制长度"
+                }),
+                "seed": ("INT", {
+                    "default": 0, 
+                    "min": 0, 
+                    "max": 0xffffffffffffffff,
+                    "tooltip": "随机种子值，相同的种子会产生相似的结果"
+                }),
+                "timeout": ("INT", {
+                    "default": 30, 
+                    "min": 0, 
+                    "max": 6000,
+                    "tooltip": "API请求超时时间（秒）。如果在指定时间内未收到响应，将中断请求"
+                })
             }
         }
     
@@ -93,24 +120,12 @@ class GeminiPromptGeneratorJT:
                 genai.configure(api_key=api_key)
                 
                 # 设置安全配置以避免被审核过滤
-                safety_settings = [
-                    {
-                        "category": "HARM_CATEGORY_HARASSMENT",
-                        "threshold": "BLOCK_NONE",
-                    },
-                    {
-                        "category": "HARM_CATEGORY_HATE_SPEECH",
-                        "threshold": "BLOCK_NONE",
-                    },
-                    {
-                        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                        "threshold": "BLOCK_NONE",
-                    },
-                    {
-                        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-                        "threshold": "BLOCK_NONE",
-                    },
-                ]
+                safety_settings = {
+                    "harassment": "block_none",
+                    "hate_speech": "block_none", 
+                    "sexually_explicit": "block_none",
+                    "dangerous_content": "block_none"
+                }
                 
                 # 创建生成模型实例并设置生成参数
                 generation_config = {
@@ -118,37 +133,123 @@ class GeminiPromptGeneratorJT:
                     "top_p": 0.95,
                     "top_k": 40,
                     "max_output_tokens": 2048,
+                    "response_mime_type": "text/plain"
                 }
                 
-                gemini_model = genai.GenerativeModel(
-                    model_name=model,
-                    generation_config=generation_config,
-                    safety_settings=safety_settings
-                )
-
+                try:
+                    # 尝试使用新版API格式
+                    gemini_model = genai.GenerativeModel(
+                        model_name=model,
+                        generation_config=generation_config,
+                        safety_settings=safety_settings
+                    )
+                except Exception as e:
+                    # print(f"Warning: Failed to initialize with new API format: {str(e)}")
+                    # print("Falling back to legacy API format")
+                    
+                    # 降级使用传统API格式 - 一些较旧版本的库使用不同的安全设置格式
+                    safety_settings_legacy = [
+                        {
+                            "category": "HARM_CATEGORY_HARASSMENT",
+                            "threshold": "BLOCK_NONE",
+                        },
+                        {
+                            "category": "HARM_CATEGORY_HATE_SPEECH",
+                            "threshold": "BLOCK_NONE",
+                        },
+                        {
+                            "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                            "threshold": "BLOCK_NONE",
+                        },
+                        {
+                            "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                            "threshold": "BLOCK_NONE",
+                        },
+                    ]
+                    
+                    gemini_model = genai.GenerativeModel(
+                        model_name=model,
+                        generation_config=generation_config,
+                        safety_settings=safety_settings_legacy
+                    )
+                
                 # 根据 prompt_length 动态调整 input_prompt
                 if not override_system_prompt:
                     if memory == "Enable":
-                        input_prompt = f"Generate me a prompt for image generator. The theme of the prompt is {theme}. You already created those prompts: {list(prompt_history)}. Make sure you generate original prompt. Think about it step by step and make some internal critique. You only need to output generated prompt and nothing else"
+                        input_prompt = f"Generate me a prompt for image generator. The theme of the prompt is {theme}. You already created those prompts: {list(prompt_history)}. Make sure you generate original prompt. Think about it step by step and make some internal critique."
                     else:  # memory == "Disable"
-                        input_prompt = f"Generate me a prompt for image generator. The theme of the prompt is {theme}. Think about it step by step and make some internal critique. You only need to output generated prompt and nothing else"
+                        input_prompt = f"Generate me a prompt for image generator. The theme of the prompt is {theme}. Think about it step by step and make some internal critique."
                     
                     # 只有当 prompt_length 不为 0 时，才添加长度和 prompt 标签的限制
                     if prompt_length > 0:
-                        input_prompt += f" You must keep the length of your generated prompt around {prompt_length} words."
+                        input_prompt += f" You must keep the length of your generated prompt around {prompt_length} words. **You only need to output generated prompt and nothing else!**"
+                    else:
+                        input_prompt += f" **You only need to output generated prompt and nothing else!**"
                 else:
-                    input_prompt = f"The theme is {theme}. Please generate a response strictly following the instruction: {override_system_prompt}."
+                    # 处理自定义提示词中的变量替换
+                    custom_prompt = override_system_prompt
+                    
+                    # 支持多种变量格式的替换
+                    replacements = {
+                        "{theme}": theme,
+                        "{prompt_length}": str(prompt_length),
+                        "{seed}": str(seed)
+                    }
+                    
+                    # 根据memory状态决定历史记录的值
+                    if memory == "Enable":
+                        # 启用历史记录时，正常替换历史记录变量
+                        replacements.update({
+                            "{prompt_history}": str(list(prompt_history)),
+                            "{list(prompt_history)}": str(list(prompt_history)),
+                            "{memory}": str(list(prompt_history))
+                        })
+                    else:
+                        # 禁用历史记录时，历史记录变量替换为空列表
+                        replacements.update({
+                            "{prompt_history}": "[]",
+                            "{list(prompt_history)}": "[]",
+                            "{memory}": "[]"
+                        })
+                    
+                    # 替换所有支持的变量
+                    for placeholder, value in replacements.items():
+                        custom_prompt = custom_prompt.replace(placeholder, value)
+                    
+                    # 打印调试信息
+                    print(f"Memory mode: {memory}")
+                    if memory == "Disable":
+                        print("历史记录变量被替换为空列表[]")
+                    
+                    input_prompt = f"The theme is {theme}. Please generate a response strictly following the instruction: {custom_prompt}."
                     
                     # 只有当 prompt_length 不为 0 时，才添加长度和 prompt 标签的限制
                     if prompt_length > 0:
-                        input_prompt += f" You must keep the length of response around {prompt_length} words."
+                        input_prompt += f" You must keep the length of response around {prompt_length} words. **You only need to output generated prompt and nothing else!**"
+                    else:
+                        input_prompt += f" **You only need to output generated prompt and nothing else!**"
 
                 # 检查是否取消
                 if cancel_event.is_set():
                     return
                 
                 # 发送请求到API
-                response = gemini_model.generate_content(input_prompt)
+                try:
+                    response = gemini_model.generate_content(input_prompt)
+                except Exception as api_error:
+                    error_msg = str(api_error)
+                    if "400 Bad Request" in error_msg:
+                        raise ComfyUIAPIError(f"API rejected the request due to invalid input. Details: {error_msg}")
+                    elif "403 Forbidden" in error_msg:
+                        raise ComfyUIAPIError(f"API access denied. Please check your API key and permissions. Details: {error_msg}")
+                    elif "429 Too Many Requests" in error_msg:
+                        raise ComfyUIAPIError(f"API rate limit exceeded. Please wait before trying again. Details: {error_msg}")
+                    elif "500 Internal Server Error" in error_msg:
+                        raise ComfyUIAPIError(f"Google API server error. Please try again later. Details: {error_msg}")
+                    elif "Connection" in error_msg:
+                        raise ComfyUIAPIError(f"Connection error. Please check your internet connection. Details: {error_msg}")
+                    else:
+                        raise ComfyUIAPIError(f"Failed to generate content. Details: {error_msg}")
                 
                 # 检查是否取消
                 if cancel_event.is_set():
