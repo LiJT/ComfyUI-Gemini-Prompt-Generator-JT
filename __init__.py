@@ -32,6 +32,30 @@ def get_gemini_api_key():
         print(f"Error: Unable to read API key. {str(e)}")
         return ""
 
+# 将图像转换为Pillow图像的辅助函数
+def images_to_pillow(image):
+    from PIL import Image
+    import numpy as np
+    
+    if image is None:
+        return []
+        
+    # 转换张量为PIL图像
+    result = []
+    if len(image.shape) == 4:  # 批量图像
+        for i in range(image.shape[0]):
+            img = image[i].numpy()
+            img = (img * 255).astype(np.uint8)
+            img = Image.fromarray(img)
+            result.append(img)
+    else:  # 单个图像
+        img = image.numpy()
+        img = (img * 255).astype(np.uint8)
+        img = Image.fromarray(img)
+        result.append(img)
+    
+    return result
+
 class GeminiPromptGeneratorJT:  
     
     @classmethod
@@ -48,10 +72,11 @@ class GeminiPromptGeneratorJT:
                     "multiline": True, 
                     "tooltip": "自定义提示词。您可以使用以下变量：\n{theme} - 当前主题\n{prompt_history}或{memory} - 历史提示记录(当Memory设置为Disable时将替换为空列表[])\n{prompt_length} - 提示长度设置\n{seed} - 当前种子值\n例如：'为{theme}生成一个图像提示词，历史记录：{prompt_history}'"
                 }),
-                "model": (["gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.0-pro", "gemini-pro-vision","gemini-2.5-pro-exp-03-25"], {
+                "model": (["gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-pro-exp-03-25"], {
                     "tooltip": "选择要使用的Gemini模型。不同模型有不同的能力和速度特性"
                 }),
-                "memory": (["Enable", "Disable"], {
+                "enable_memory": ("BOOLEAN", {
+                    "default": True, 
                     "tooltip": "启用或禁用历史记忆功能。启用时会记住之前生成的提示，避免重复；禁用时每次生成独立提示"
                 }),
                 "prompt_length": ("INT", {
@@ -72,6 +97,11 @@ class GeminiPromptGeneratorJT:
                     "max": 6000,
                     "tooltip": "API请求超时时间(秒)。如果在指定时间内未收到响应，将中断请求"
                 })
+            },
+            "optional": {
+                "image_1": ("IMAGE", ),
+                "image_2": ("IMAGE", ),
+                "image_3": ("IMAGE", )
             }
         }
     
@@ -79,7 +109,10 @@ class GeminiPromptGeneratorJT:
     FUNCTION = "generate_prompt"
     CATEGORY = "text/generation"
     
-    def generate_prompt(self, theme, override_system_prompt, model, memory, prompt_length, seed, timeout):
+    def generate_prompt(self, theme, override_system_prompt, model, enable_memory, prompt_length, seed, timeout, image_1=None, image_2=None, image_3=None):
+        # 将布尔值转换为原来的字符串格式以保持兼容性
+        memory = "Enable" if enable_memory else "Disable"
+        
         # Use the seed to initialize the random number generator
         random.seed(seed)
         
@@ -173,12 +206,27 @@ class GeminiPromptGeneratorJT:
                         safety_settings=safety_settings_legacy
                     )
                 
+                # 处理图像输入
+                images_to_send = []
+                for img in [image_1, image_2, image_3]:
+                    if img is not None:
+                        images_to_send.extend(images_to_pillow(img))
+                
+                # 是否包含图像
+                has_images = len(images_to_send) > 0
+                
                 # 根据 prompt_length 动态调整 input_prompt
                 if not override_system_prompt:
                     if memory == "Enable":
-                        input_prompt = f"Generate me a prompt for image generator. The theme of the prompt is {theme}. You already created those prompts: {list(prompt_history)}. Make sure you generate original prompt. Think about it step by step and make some internal critique."
+                        if has_images:
+                            input_prompt = f"Generate me a prompt for image generator based on the provided image(s). The theme of the prompt is {theme}. You already created those prompts: {list(prompt_history)}. Make sure you generate original prompt that describes and expands on what you see in the image(s). Think about it step by step and make some internal critique."
+                        else:
+                            input_prompt = f"Generate me a prompt for image generator. The theme of the prompt is {theme}. You already created those prompts: {list(prompt_history)}. Make sure you generate original prompt. Think about it step by step and make some internal critique."
                     else:  # memory == "Disable"
-                        input_prompt = f"Generate me a prompt for image generator. The theme of the prompt is {theme}. Think about it step by step and make some internal critique."
+                        if has_images:
+                            input_prompt = f"Generate me a prompt for image generator based on the provided image(s). The theme of the prompt is {theme}. Think about it step by step and make some internal critique."
+                        else:
+                            input_prompt = f"Generate me a prompt for image generator. The theme of the prompt is {theme}. Think about it step by step and make some internal critique."
                     
                     # 只有当 prompt_length 不为 0 时，才添加长度和 prompt 标签的限制
                     if prompt_length > 0:
@@ -221,13 +269,16 @@ class GeminiPromptGeneratorJT:
                     if memory == "Disable":
                         print("历史记录变量被替换为空列表[]")
                     
-                    input_prompt = f"The theme is {theme}. Please generate a response strictly following the instruction: {custom_prompt}."
+                    if has_images:
+                        input_prompt = f"The theme is {theme}. I'm providing you with image(s) for reference. Please generate a response strictly following the instruction: {custom_prompt}."
+                    else:
+                        input_prompt = f"The theme is {theme}. Please generate a response strictly following the instruction: {custom_prompt}."
                     
                     # 只有当 prompt_length 不为 0 时，才添加长度和 prompt 标签的限制
                     if prompt_length > 0:
-                        input_prompt += f" You must keep the length of response around {prompt_length} words. **You only need to output generated prompt and nothing else!**"
+                        input_prompt += f" You must keep the length of response around {prompt_length} words. **You only need to give me the answer and nothing else!**"
                     else:
-                        input_prompt += f" **You only need to output generated prompt and nothing else!**"
+                        input_prompt += f" **You only need to give me the answer and nothing else!**"
 
                 # 检查是否取消
                 if cancel_event.is_set():
@@ -235,7 +286,13 @@ class GeminiPromptGeneratorJT:
                 
                 # 发送请求到API
                 try:
-                    response = gemini_model.generate_content(input_prompt)
+                    if has_images:
+                        # 发送文本和图像
+                        content_list = [input_prompt] + images_to_send
+                        response = gemini_model.generate_content(content_list)
+                    else:
+                        # 只发送文本
+                        response = gemini_model.generate_content(input_prompt)
                 except Exception as api_error:
                     error_msg = str(api_error)
                     if "400 Bad Request" in error_msg:
@@ -261,6 +318,8 @@ class GeminiPromptGeneratorJT:
                     
                     print("----INPUT----")
                     print(input_prompt)
+                    if has_images:
+                        print(f"(包含 {len(images_to_send)} 张图片)")
                     print("----OUTPUT----")
                     print(generated_prompt)
                     # 使用deque的append方法，当达到最大长度时会自动移除最早的元素
