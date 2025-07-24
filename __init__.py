@@ -230,9 +230,9 @@ class GeminiPromptGeneratorJT:
                     
                     # 只有当 prompt_length 不为 0 时，才添加长度和 prompt 标签的限制
                     if prompt_length > 0:
-                        input_prompt += f" You must keep the length of your generated prompt around {prompt_length} words. **You only need to output generated prompt and nothing else!**"
+                        input_prompt += f" You must keep the length of your generated prompt around {prompt_length} words. **Restrictions: Your prompt must be in English only. Do not explain your prompt; just output the prompt directly. Do not output any other non-prompt text; only output the prompt itself, and do not include anything like 'Here is the prompt' or similar words.**"
                     else:
-                        input_prompt += f" **You only need to output generated prompt and nothing else!**"
+                        input_prompt += f" **Restrictions: Your prompt must be in English only. Do not explain your prompt; just output the prompt directly. Do not output any other non-prompt text; only output the prompt itself, and do not include anything like 'Here is the prompt' or similar words.**"
                 else:
                     # 处理自定义提示词中的变量替换
                     custom_prompt = override_system_prompt
@@ -276,9 +276,9 @@ class GeminiPromptGeneratorJT:
                     
                     # 只有当 prompt_length 不为 0 时，才添加长度和 prompt 标签的限制
                     if prompt_length > 0:
-                        input_prompt += f" You must keep the length of response around {prompt_length} words. **You only need to give me the answer and nothing else!**"
+                        input_prompt += f" You must keep the length of response around {prompt_length} words. **Restrictions: Your prompt must be in English only. Do not explain your prompt; just output the prompt directly. Do not output any other non-prompt text; only output the prompt itself, and do not include anything like 'Here is the prompt' or similar words.**"
                     else:
-                        input_prompt += f" **You only need to give me the answer and nothing else!**"
+                        input_prompt += f" **Restrictions: Your prompt must be in English only. Do not explain your prompt; just output the prompt directly. Do not output any other non-prompt text; only output the prompt itself, and do not include anything like 'Here is the prompt' or similar words.**"
 
                 # 检查是否取消
                 if cancel_event.is_set():
