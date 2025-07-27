@@ -14,6 +14,27 @@ class ComfyUITimeoutError(Exception):
 class ComfyUIAPIError(Exception):
     pass
 
+# 提示词模板常量 - 便于用户自定义修改
+PROMPT_TEMPLATES = {
+    # 基础提示词模板（无图像）
+    "base_with_memory": "Generate me a prompt for image generator. The theme of the prompt is {theme}. You already created those prompts: {history}. Make sure you generate original prompt. Think about it step by step and make some internal critique.",
+    "base_without_memory": "Generate me a prompt for image generator. The theme of the prompt is {theme}. Think about it step by step and make some internal critique.",
+    
+    # 图像提示词模板（有图像）
+    "image_with_memory": "Generate me a prompt for image generator based on the provided image(s). The theme of the prompt is {theme}. You already created those prompts: {history}. Make sure you generate original prompt that describes and expands on what you see in the image(s). Think about it step by step and make some internal critique.",
+    "image_without_memory": "Generate me a prompt for image generator based on the provided image(s). The theme of the prompt is {theme}. Think about it step by step and make some internal critique.",
+    
+    # 自定义提示词模板前缀
+    "custom_with_images": "The theme is {theme}. I'm providing you with image(s) for reference. Please generate a response strictly following the instruction: {custom_prompt}.",
+    "custom_without_images": "The theme is {theme}. Please generate a response strictly following the instruction: {custom_prompt}.",
+    
+    # 限制性后缀
+    "length_restriction": " You must keep the length of your generated prompt around {length} words.",
+    "no_length_restriction": "",
+    "general_restriction": " **Restrictions: Do not explain your prompt; just output the prompt directly. Do not output any other non-prompt text; only output the prompt itself, and do not include anything like 'Here is the prompt' or similar words.**",
+    "english_only_restriction": " Your answer must be in English only."
+}
+
 # 使用deque替代list，并设置最大长度为15
 prompt_history = deque(maxlen=15)  # 将memory重命名为prompt_history
 last_memory_mode = None  # 添加一个变量来跟踪上一次的内存模式
@@ -72,15 +93,19 @@ class GeminiPromptGeneratorJT:
                     "multiline": True, 
                     "tooltip": "自定义提示词。您可以使用以下变量：\n{theme} - 当前主题\n{prompt_history}或{memory} - 历史提示记录(当Memory设置为Disable时将替换为空列表[])\n{prompt_length} - 提示长度设置\n{seed} - 当前种子值\n例如：'为{theme}生成一个图像提示词，历史记录：{prompt_history}'"
                 }),
-                "model": (["gemini-2.5-flash", "gemini-2.5-flash-lite-preview-06-17", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro"], {
-                    "tooltip": "选择要使用的Gemini模型。**强烈推荐使用最新模型**：\n\n🔥 **推荐模型（免费可用）**：\n• **gemini-2.5-flash** - 最新混合推理模型，性价比最高，支持思维链推理 [免费：10 RPM, 250K TPM, 250 RPD]\n• **gemini-2.5-flash-lite** - 最经济实惠的模型，适合大规模使用 [免费：15 RPM, 250K TPM, 1000 RPD]\n• **gemini-2.0-flash** - 均衡的多模态模型，适用于各种任务 [免费：15 RPM, 1M TPM, 200 RPD]\n• **gemini-2.0-flash-lite** - 轻量级高效模型，成本最低 [免费：30 RPM, 1M TPM, 200 RPD]\n\n⚠️ **已弃用模型（不推荐）**：\n• **gemini-1.5-flash** - 已弃用，将于2025年9月24日退役，建议迁移到2.0-flash-lite\n• **gemini-1.5-flash-8b** - 已弃用，将于2025年9月24日退役\n• **gemini-1.5-pro** - 已弃用，将于2025年9月24日退役，建议迁移到2.5-flash\n\n💡 **免费层说明**：RPM=每分钟请求数，TPM=每分钟Token数，RPD=每日请求数\n📖 **迁移优势**：新模型提供更高免费配额、更好性能、更低成本和新功能支持"
+                "model": (["gemini-2.0-flash-lite", "gemini-2.0-flash", "gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro"], {
+                    "tooltip": "选择要使用的Gemini模型。**强烈推荐使用最新模型**：\n\n🔥 **推荐模型（免费可用）**：\n• **gemini-2.5-flash** - 最新混合推理模型，支持思维链推理，性价比最高 [免费配额高]\n• **gemini-2.5-flash-lite** - 最经济实惠的模型，适合大规模高频使用 [成本最低]\n• **gemini-2.5-pro** - 最高级模型，适用于复杂推理任务 [性能最强]\n• **gemini-2.0-flash** - 均衡的多模态模型，适用于各种任务 [免费：15 RPM, 1M TPM, 200 RPD]\n• **gemini-2.0-flash-lite** - 轻量级高效模型，成本低延迟小 [免费：30 RPM, 1M TPM, 200 RPD]\n\n💡 **免费层说明**：RPM=每分钟请求数，TPM=每分钟Token数，RPD=每日请求数\n📖 **新功能**：2.5系列模型支持自适应思维模式，显著提升推理能力和准确性"
                 }),
                 "enable_memory": ("BOOLEAN", {
-                    "default": True, 
+                    "default": False,  # 修改默认值为False
                     "tooltip": "启用或禁用历史记忆功能。启用时会记住之前生成的提示，避免重复；禁用时每次生成独立提示"
                 }),
+                "english_only": ("BOOLEAN", {
+                    "default": False,
+                    "tooltip": "启用后将强制生成的提示词只使用英文。会在发送给Gemini的指令中添加英文限制要求"
+                }),
                 "prompt_length": ("INT", {
-                    "default": 200, 
+                    "default": 120,  # 修改默认值为120
                     "min": 0, 
                     "max": 5000,
                     "tooltip": "控制生成提示词的长度(单词数)。设为0表示不限制长度"
@@ -92,7 +117,7 @@ class GeminiPromptGeneratorJT:
                     "tooltip": "随机种子值，相同的种子会产生相似的结果"
                 }),
                 "timeout": ("INT", {
-                    "default": 30, 
+                    "default": 15,  # 修改默认值为15
                     "min": 0, 
                     "max": 6000,
                     "tooltip": "API请求超时时间(秒)。如果在指定时间内未收到响应，将中断请求"
@@ -109,7 +134,7 @@ class GeminiPromptGeneratorJT:
     FUNCTION = "generate_prompt"
     CATEGORY = "text/generation"
     
-    def generate_prompt(self, theme, override_system_prompt, model, enable_memory, prompt_length, seed, timeout, image_1=None, image_2=None, image_3=None):
+    def generate_prompt(self, theme, override_system_prompt, model, enable_memory, english_only, prompt_length, seed, timeout, image_1=None, image_2=None, image_3=None):
         # 将布尔值转换为原来的字符串格式以保持兼容性
         memory = "Enable" if enable_memory else "Disable"
         
@@ -215,24 +240,38 @@ class GeminiPromptGeneratorJT:
                 # 是否包含图像
                 has_images = len(images_to_send) > 0
                 
-                # 根据 prompt_length 动态调整 input_prompt
+                # 根据 prompt_length 动态调整 input_prompt - 使用提示词模板
                 if not override_system_prompt:
+                    # 选择基础模板
                     if memory == "Enable":
                         if has_images:
-                            input_prompt = f"Generate me a prompt for image generator based on the provided image(s). The theme of the prompt is {theme}. You already created those prompts: {list(prompt_history)}. Make sure you generate original prompt that describes and expands on what you see in the image(s). Think about it step by step and make some internal critique."
+                            input_prompt = PROMPT_TEMPLATES["image_with_memory"].format(
+                                theme=theme, 
+                                history=list(prompt_history)
+                            )
                         else:
-                            input_prompt = f"Generate me a prompt for image generator. The theme of the prompt is {theme}. You already created those prompts: {list(prompt_history)}. Make sure you generate original prompt. Think about it step by step and make some internal critique."
+                            input_prompt = PROMPT_TEMPLATES["base_with_memory"].format(
+                                theme=theme, 
+                                history=list(prompt_history)
+                            )
                     else:  # memory == "Disable"
                         if has_images:
-                            input_prompt = f"Generate me a prompt for image generator based on the provided image(s). The theme of the prompt is {theme}. Think about it step by step and make some internal critique."
+                            input_prompt = PROMPT_TEMPLATES["image_without_memory"].format(theme=theme)
                         else:
-                            input_prompt = f"Generate me a prompt for image generator. The theme of the prompt is {theme}. Think about it step by step and make some internal critique."
+                            input_prompt = PROMPT_TEMPLATES["base_without_memory"].format(theme=theme)
                     
-                    # 只有当 prompt_length 不为 0 时，才添加长度和 prompt 标签的限制
+                    # 添加长度限制
                     if prompt_length > 0:
-                        input_prompt += f" You must keep the length of your generated prompt around {prompt_length} words. **Restrictions: Your prompt must be in English only. Do not explain your prompt; just output the prompt directly. Do not output any other non-prompt text; only output the prompt itself, and do not include anything like 'Here is the prompt' or similar words.**"
+                        input_prompt += PROMPT_TEMPLATES["length_restriction"].format(length=prompt_length)
                     else:
-                        input_prompt += f" **Restrictions: Your prompt must be in English only. Do not explain your prompt; just output the prompt directly. Do not output any other non-prompt text; only output the prompt itself, and do not include anything like 'Here is the prompt' or similar words.**"
+                        input_prompt += PROMPT_TEMPLATES["no_length_restriction"]
+                    
+                    # 添加通用限制
+                    input_prompt += PROMPT_TEMPLATES["general_restriction"]
+                    
+                    # 添加英文限制（如果启用）
+                    if english_only:
+                        input_prompt += PROMPT_TEMPLATES["english_only_restriction"]
                 else:
                     # 处理自定义提示词中的变量替换
                     custom_prompt = override_system_prompt
@@ -269,16 +308,30 @@ class GeminiPromptGeneratorJT:
                     if memory == "Disable":
                         print("历史记录变量被替换为空列表[]")
                     
+                    # 使用自定义提示词模板
                     if has_images:
-                        input_prompt = f"The theme is {theme}. I'm providing you with image(s) for reference. Please generate a response strictly following the instruction: {custom_prompt}."
+                        input_prompt = PROMPT_TEMPLATES["custom_with_images"].format(
+                            theme=theme, 
+                            custom_prompt=custom_prompt
+                        )
                     else:
-                        input_prompt = f"The theme is {theme}. Please generate a response strictly following the instruction: {custom_prompt}."
+                        input_prompt = PROMPT_TEMPLATES["custom_without_images"].format(
+                            theme=theme, 
+                            custom_prompt=custom_prompt
+                        )
                     
-                    # 只有当 prompt_length 不为 0 时，才添加长度和 prompt 标签的限制
+                    # 添加长度限制
                     if prompt_length > 0:
-                        input_prompt += f" You must keep the length of response around {prompt_length} words. **Restrictions: Your prompt must be in English only. Do not explain your prompt; just output the prompt directly. Do not output any other non-prompt text; only output the prompt itself, and do not include anything like 'Here is the prompt' or similar words.**"
+                        input_prompt += PROMPT_TEMPLATES["length_restriction"].format(length=prompt_length)
                     else:
-                        input_prompt += f" **Restrictions: Your prompt must be in English only. Do not explain your prompt; just output the prompt directly. Do not output any other non-prompt text; only output the prompt itself, and do not include anything like 'Here is the prompt' or similar words.**"
+                        input_prompt += PROMPT_TEMPLATES["no_length_restriction"]
+                    
+                    # 添加通用限制
+                    input_prompt += PROMPT_TEMPLATES["general_restriction"]
+                    
+                    # 添加英文限制（如果启用）
+                    if english_only:
+                        input_prompt += PROMPT_TEMPLATES["english_only_restriction"]
 
                 # 检查是否取消
                 if cancel_event.is_set():
