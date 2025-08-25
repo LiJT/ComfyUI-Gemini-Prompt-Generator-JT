@@ -244,15 +244,17 @@ class GeminiPromptGeneratorJT:
                 if not override_system_prompt:
                     # 选择基础模板
                     if memory == "Enable":
+                        # 处理历史记录：如果为空则使用空字符串，否则使用历史记录列表的字符串表示
+                        history_str = "" if len(prompt_history) == 0 else str(list(prompt_history))
                         if has_images:
                             input_prompt = PROMPT_TEMPLATES["image_with_memory"].format(
                                 theme=theme, 
-                                history=list(prompt_history)
+                                history=history_str
                             )
                         else:
                             input_prompt = PROMPT_TEMPLATES["base_with_memory"].format(
                                 theme=theme, 
-                                history=list(prompt_history)
+                                history=history_str
                             )
                     else:  # memory == "Disable"
                         if has_images:
@@ -285,18 +287,27 @@ class GeminiPromptGeneratorJT:
                     
                     # 根据memory状态决定历史记录的值
                     if memory == "Enable":
-                        # 启用历史记录时，正常替换历史记录变量
-                        replacements.update({
-                            "{prompt_history}": str(list(prompt_history)),
-                            "{list(prompt_history)}": str(list(prompt_history)),
-                            "{memory}": str(list(prompt_history))
-                        })
+                        # 启用历史记录时，如果历史记录为空则替换为空字符串，否则正常替换
+                        if len(prompt_history) == 0:
+                            # 历史记录为空时，使用空字符串而不是"[]"
+                            replacements.update({
+                                "{prompt_history}": "",
+                                "{list(prompt_history)}": "",
+                                "{memory}": ""
+                            })
+                        else:
+                            # 历史记录不为空时，正常替换历史记录变量
+                            replacements.update({
+                                "{prompt_history}": str(list(prompt_history)),
+                                "{list(prompt_history)}": str(list(prompt_history)),
+                                "{memory}": str(list(prompt_history))
+                            })
                     else:
-                        # 禁用历史记录时，历史记录变量替换为空列表
+                        # 禁用历史记录时，历史记录变量替换为空字符串
                         replacements.update({
-                            "{prompt_history}": "[]",
-                            "{list(prompt_history)}": "[]",
-                            "{memory}": "[]"
+                            "{prompt_history}": "",
+                            "{list(prompt_history)}": "",
+                            "{memory}": ""
                         })
                     
                     # 替换所有支持的变量
@@ -306,7 +317,9 @@ class GeminiPromptGeneratorJT:
                     # 打印调试信息
                     print(f"Memory mode: {memory}")
                     if memory == "Disable":
-                        print("历史记录变量被替换为空列表[]")
+                        print("历史记录变量被替换为空字符串")
+                    elif memory == "Enable" and len(prompt_history) == 0:
+                        print("Memory已启用但历史记录为空，历史记录变量被替换为空字符串")
                     
                     # 使用自定义提示词模板
                     if has_images:
