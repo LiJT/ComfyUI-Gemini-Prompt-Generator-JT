@@ -93,8 +93,8 @@ class GeminiPromptGeneratorJT:
                     "multiline": True, 
                     "tooltip": "自定义提示词。您可以使用以下变量：\n{theme} - 当前主题\n{prompt_history}或{memory} - 历史提示记录(当Memory设置为Disable时将替换为空列表[])\n{prompt_length} - 提示长度设置\n{seed} - 当前种子值\n例如：'为{theme}生成一个图像提示词，历史记录：{prompt_history}'"
                 }),
-                "model": (["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash-lite", "gemini-2.0-flash"], {
-                    "tooltip": "选择要使用的Gemini模型。**强烈推荐使用最新模型**：\n\n🔥 **推荐模型（免费可用）**：\n• **gemini-2.5-flash-lite** - 最经济实惠，适合大规模高频使用 [免费：15 RPM, 250K TPM, 1000 RPD]\n• **gemini-2.5-flash** - 最新混合推理模型，支持思维链推理 [免费：10 RPM, 250K TPM, 250 RPD]\n• **gemini-2.5-pro** - 最高级模型，适用于复杂推理任务 [免费：2 RPM, 125K TPM, 50 RPD]\n• **gemini-2.0-flash** - 均衡的多模态模型，适用于各种任务 [免费：15 RPM, 1M TPM, 200 RPD]\n• **gemini-2.0-flash-lite** - 轻量级高效模型，成本低延迟小 [免费：30 RPM, 1M TPM, 200 RPD]\n• **免费层说明**：RPM=每分钟请求数，TPM=每分钟Token数，RPD=每日请求数\n📖"
+                "model": (["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash-lite", "gemini-2.0-flash", "gemini-3-flash-preview"], {
+                    "tooltip": "模型名称 + 免费层速率限制（官方配额会动态调整，以 AI Studio 为准）：\n• gemini-2.5-flash-lite：15 RPM / 1M TPM / 1000 RPD\n• gemini-2.5-flash：10 RPM / 250K TPM / 250 RPD\n• gemini-2.5-pro：2 RPM / 125K TPM / 50 RPD\n• gemini-2.0-flash-lite：30 RPM / 1M TPM / 200 RPD\n• gemini-2.0-flash：15 RPM / 1M TPM / 200 RPD\n• gemini-3-flash-preview：预览模型，免费限额请以 AI Studio 实时配额为准\n参数：RPM=每分钟请求数，TPM=每分钟Token数，RPD=每日请求数"
                 }),
                 "enable_memory": ("BOOLEAN", {
                     "default": False,  # 修改默认值为False
