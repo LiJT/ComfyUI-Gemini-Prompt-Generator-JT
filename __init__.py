@@ -17,12 +17,12 @@ class ComfyUIAPIError(Exception):
 # 提示词模板常量 - 便于用户自定义修改
 PROMPT_TEMPLATES = {
     # 基础提示词模板（无图像）
-    "base_with_memory": "Generate me a prompt for image generator. The theme of the prompt is {theme}. You already created those prompts: {history}. Make sure you generate original prompt. Think about it step by step and make some internal critique.",
-    "base_without_memory": "Generate me a prompt for image generator. The theme of the prompt is {theme}. Think about it step by step and make some internal critique.",
+    "base_with_memory": "Generate me a prompt for image generator. The theme of the prompt is {theme}. You already created those prompts: {history}. Make sure you generate original prompt.",
+    "base_without_memory": "Generate me a prompt for image generator. The theme of the prompt is {theme}.",
     
     # 图像提示词模板（有图像）
-    "image_with_memory": "Generate me a prompt for image generator based on the provided image(s). The theme of the prompt is {theme}. You already created those prompts: {history}. Make sure you generate original prompt that describes and expands on what you see in the image(s). Think about it step by step and make some internal critique.",
-    "image_without_memory": "Generate me a prompt for image generator based on the provided image(s). The theme of the prompt is {theme}. Think about it step by step and make some internal critique.",
+    "image_with_memory": "Generate me a prompt for image generator based on the provided image(s). The theme of the prompt is {theme}. You already created those prompts: {history}. Make sure you generate original prompt that describes and expands on what you see in the image(s).",
+    "image_without_memory": "Generate me a prompt for image generator based on the provided image(s). The theme of the prompt is {theme}.",
     
     # 自定义提示词模板前缀
     "custom_with_images": "The theme is {theme}. I'm providing you with image(s) for reference. Please generate a response strictly following the instruction: {custom_prompt}.",
@@ -94,7 +94,7 @@ class GeminiPromptGeneratorJT:
                     "tooltip": "自定义提示词。您可以使用以下变量：\n{theme} - 当前主题\n{prompt_history}或{memory} - 历史提示记录(当Memory设置为Disable时将替换为空列表[])\n{prompt_length} - 提示长度设置\n{seed} - 当前种子值\n例如：'为{theme}生成一个图像提示词，历史记录：{prompt_history}'"
                 }),
                 "model": (["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-flash-preview"], {
-                    "tooltip": "模型名称 + 免费层速率限制（官方配额会动态调整，以 AI Studio 为准）：\n• gemini-2.5-flash-lite：15 RPM / 1M TPM / 1000 RPD\n• gemini-2.5-flash：10 RPM / 250K TPM / 250 RPD\n• gemini-2.5-pro：2 RPM / 125K TPM / 50 RPD\n• gemini-2.0-flash-lite：30 RPM / 1M TPM / 200 RPD\n• gemini-2.0-flash：15 RPM / 1M TPM / 200 RPD\n• gemini-3-flash-preview：预览模型，免费限额请以 AI Studio 实时配额为准\n参数：RPM=每分钟请求数，TPM=每分钟Token数，RPD=每日请求数"
+                    "tooltip": "模型名称 + 免费层速率限制（官方配额会动态调整，以 AI Studio 为准）：\n• gemini-2.5-flash-lite：10 RPM / 250K TPM / 20 RPD\n• gemini-2.5-flash：5 RPM / 250K TPM / 20 RPD\n• gemini-2.5-pro：2 RPM / 125K TPM / 50 RPD\n• gemini-2.0-flash-lite：30 RPM / 1M TPM / 200 RPD\n• gemini-2.0-flash：15 RPM / 1M TPM / 200 RPD\n• gemini-3-flash-preview：5 RPM / 250K TPM / 20 RPD\n参数：RPM=每分钟请求数，TPM=每分钟Token数，RPD=每日请求数"
                 }),
                 "enable_memory": ("BOOLEAN", {
                     "default": False,  # 修改默认值为False
